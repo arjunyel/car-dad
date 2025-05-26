@@ -109,6 +109,52 @@ const cancelScheduledTask = tool({
   },
 });
 
+const searchKnowledgeBase = tool({
+  description:
+    "Search through our car bible to try and help answer the user's questions",
+  parameters: z.object({
+    query: z
+      .string()
+      .describe(
+        "The user's question that needs to be answered using the car bible"
+      ),
+    max_results: z
+      .number()
+      .default(10)
+      .describe("Maximum number of results to retrieve (default: 10)"),
+  }),
+  execute: async ({ query, max_results }) => {
+    try {
+      const { agent } = getCurrentAgent<Chat>();
+
+      const result = await agent!.env.AI.autorag("my-auto-rag").aiSearch({
+        query,
+        max_num_results: max_results,
+        rewrite_query: true, // Let AutoRAG optimize the query
+        ranking_options: {
+          score_threshold: 0.3, // Only return relevant results
+        },
+      });
+      return result.response;
+    } catch (error) {
+      console.error("AutoRAG query failed:", error);
+      return {
+        success: false,
+        error: "Failed to search knowledge base",
+      };
+    }
+  },
+});
+
+const setUserVehicle = tool({
+  description: "set the user's vehicle information",
+  parameters: z.object({
+    make: z.string(),
+    model: z.string(),
+    year: z.number(),
+  }),
+});
+
 /**
  * Export all available tools
  * These will be provided to the AI model to describe available capabilities
@@ -119,6 +165,8 @@ export const tools = {
   scheduleTask,
   getScheduledTasks,
   cancelScheduledTask,
+  searchKnowledgeBase,
+  setUserVehicle,
 };
 
 /**
@@ -130,5 +178,22 @@ export const executions = {
   getWeatherInformation: async ({ city }: { city: string }) => {
     console.log(`Getting weather information for ${city}`);
     return `The weather in ${city} is sunny`;
+  },
+  setUserVehicle: async ({
+    make,
+    model,
+    year,
+  }: {
+    make: string;
+    model: string;
+    year: number;
+  }) => {
+    const { agent } = getCurrentAgent<Chat>();
+    agent!.setState({
+      make,
+      model,
+      year,
+    });
+    return `Vehicle information set to ${make} ${model} ${year}`;
   },
 };
