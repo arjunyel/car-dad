@@ -8,6 +8,7 @@ import { z } from "zod";
 import type { Chat } from "./server";
 import { getCurrentAgent } from "agents";
 import { unstable_scheduleSchema } from "agents/schedule";
+import { env } from "cloudflare:workers";
 
 /**
  * Weather information tool that requires human confirmation
@@ -125,9 +126,7 @@ const searchKnowledgeBase = tool({
   }),
   execute: async ({ query, max_results }) => {
     try {
-      const { agent } = getCurrentAgent<Chat>();
-
-      const result = await agent!.env.AI.autorag("my-auto-rag").aiSearch({
+      const result = await env.AI.autorag("my-auto-rag").aiSearch({
         query,
         max_num_results: max_results,
         rewrite_query: true, // Let AutoRAG optimize the query
